@@ -9,7 +9,11 @@ import {
   Users,
   ExternalLink,
   Loader2,
+  X,
 } from "lucide-react";
+import ErrorPage from "@/components/ErrorPage";
+import PodcastLoading from "@/components/PodcastLoaderPage";
+import { useRouter } from "next/navigation";
 
 type PodcastInfo = {
   title: string;
@@ -41,9 +45,8 @@ export default function PodcastPage() {
   const [playingEpisode, setPlayingEpisode] = useState<Episode | null>(null);
   const [audioLoading, setAudioLoading] = useState<boolean>(false);
 
-  console.log("podcastData", podcastData);
-  console.log("episodes", episodes);
-  console.log(playingEpisode);
+  const router = useRouter();
+
   useEffect(() => {
     fetchPodcastData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,7 +72,9 @@ export default function PodcastPage() {
           "Tony Adamu",
         image:
           // Use getElementsByTagName for itunes:image (cross-browser)
-          channel?.getElementsByTagName("itunes:image")[0]?.getAttribute("href") ||
+          channel
+            ?.getElementsByTagName("itunes:image")[0]
+            ?.getAttribute("href") ||
           channel?.querySelector("itunes\\:image")?.getAttribute("href") ||
           "",
         language: channel?.querySelector("language")?.textContent || "en",
@@ -184,21 +189,11 @@ export default function PodcastPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading podcast data...</div>
-      </div>
-    );
+    return <PodcastLoading />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 flex items-center justify-center">
-        <div className="text-red-400 text-xl">
-          Error loading podcast: {error}
-        </div>
-      </div>
-    );
+    return <ErrorPage error={error} onRetry={fetchPodcastData} />;
   }
 
   // Handler for Play Latest Episode button
@@ -224,7 +219,10 @@ export default function PodcastPage() {
       <nav className="bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <button className="flex items-center space-x-2 text-white hover:text-gray-300">
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center space-x-2 text-white hover:text-gray-300"
+            >
               <ArrowLeft className="h-6 w-6" />
               <span>Back to Home</span>
             </button>
@@ -324,7 +322,7 @@ export default function PodcastPage() {
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-bold text-white text-center mb-12">
-            Latest Episodes
+            Podcast Episodes
           </h2>
           <div className="space-y-6">
             {episodes.map((episode) => (
@@ -403,14 +401,6 @@ export default function PodcastPage() {
           </p>
           <div className="grid md:grid-cols-4 gap-6">
             <a
-              href="https://open.spotify.com/show/5Fh6SYR2Fgw31V59ZEcZ4c"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center justify-center"
-            >
-              Spotify
-            </a>
-            <a
               href="https://podcasts.apple.com/us/podcast/the-bridge-podcast/id1793902929"
               target="_blank"
               rel="noopener noreferrer"
@@ -434,56 +424,118 @@ export default function PodcastPage() {
             >
               iHeart
             </a>
+            <a
+              href="https://open.spotify.com/show/5Fh6SYR2Fgw31V59ZEcZ4c"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center justify-center"
+            >
+              Spotify
+            </a>
           </div>
         </div>
       </section>
 
       {/* Global Custom Audio Player */}
+
       {playingEpisode && (
-        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-white/10 z-50 flex flex-col items-center justify-center py-4 px-2">
-          <div className="flex items-center gap-4 max-w-4xl w-full">
-            <img
-              src={playingEpisode.image || podcastData?.image}
-              alt="Podcast Cover"
-              className="w-14 h-14 rounded-lg object-cover"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-white font-semibold truncate">
-                {playingEpisode.title}
+        <div
+          className={`fixed bottom-0 left-0 w-full bg-gradient-to-r from-slate-900/95 to-indigo-900/95 backdrop-blur-lg border-t border-white/20 z-50 transition-all duration-300 ease-in-out ${
+            playingEpisode
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0"
+          }`}
+        >
+          {/* Player Container */}
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+            <div className="flex items-center flex-col lg:flex-row gap-4">
+              <div className="flex gap-2 w-full items-center">
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={playingEpisode?.image || podcastData?.image}
+                    alt="Episode Cover"
+                    className="w-16 h-16 rounded-lg object-cover bg-slate-700"
+                  />
+                  {audioLoading && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <Loader2 className="animate-spin text-indigo-400 w-6 h-6" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-semibold text-base truncate mb-1">
+                    {playingEpisode.title}
+                  </div>
+                  <div className="text-gray-400 text-sm truncate">
+                    {podcastData?.title}
+                  </div>
+                </div>
+                <button
+                  className="ml-2 p-2 block lg:hidden text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
+                  onClick={() => setPlayingEpisode(null)}
+                  title="Close Player"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="text-gray-400 text-sm truncate">
-                {podcastData?.title}
+              <div className="flex-shrink-0 w-full lg:max-w-xs">
+                <audio
+                  src={playingEpisode.enclosureUrl}
+                  controls
+                  color="black"
+                  autoPlay
+                  className="w-full max-w-2xl bg-slate-800 rounded-lg outline-none"
+                  style={{ accentColor: "#6366f1" /* indigo-500 */ }}
+                  onLoadStart={() => setAudioLoading(true)}
+                  onCanPlayThrough={() => setAudioLoading(false)}
+                  onPlaying={() => setAudioLoading(false)}
+                >
+                  Your browser does not support the audio element.
+                </audio>
               </div>
+              <button
+                className="ml-2 p-2 hidden lg:block text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
+                onClick={() => setPlayingEpisode(null)}
+                title="Close Player"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              className="text-white hover:text-red-400 px-2"
-              onClick={() => setPlayingEpisode(null)}
-              title="Close Player"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="w-full flex justify-center mt-2 relative">
+
+            {/* Loading Overlay */}
             {audioLoading && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center">
-                <Loader2 className="animate-spin text-indigo-400 w-8 h-8" />
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
+                <div className=" rounded-lg px-4 py-3 flex items-center gap-3">
+                  <Loader2 className="animate-spin text-indigo-400 w-5 h-5" />
+                  <span className="text-white text-sm">Loading episode...</span>
+                </div>
               </div>
             )}
-            <audio
-              src={playingEpisode.enclosureUrl}
-              controls
-              autoPlay
-              className="w-full max-w-2xl bg-slate-800 rounded-lg outline-none"
-              style={{ accentColor: "#6366f1" /* indigo-500 */ }}
-              onLoadStart={() => setAudioLoading(true)}
-              onCanPlayThrough={() => setAudioLoading(false)}
-              onPlaying={() => setAudioLoading(false)}
-            >
-              Your browser does not support the audio element.
-            </audio>
           </div>
         </div>
       )}
+
+      {/* Spacer for fixed player */}
+      {playingEpisode && <div className="h-20 sm:h-24"></div>}
+      {/* <iframe
+        allow="autoplay"
+        width="100%"
+        height="200"
+        src="https://www.iheart.com/podcast/269-the-bridge-podcast-263312800/episode/the-switch-ep-10-272374473/?embed=true"
+      ></iframe> */}
+      {/* <iframe
+        allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+        // frameborder={0}
+        height="175"
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          overflow: "hidden",
+          borderRadius: "10px",
+        }}
+        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+        src="https://embed.podcasts.apple.com/us/podcast/lets-play-the-game-ep-12-final-episode-the-end/id1793902929?i=1000705052859"
+      ></iframe> */}
     </div>
   );
 }
